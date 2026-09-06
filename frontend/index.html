@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>iMac Remote</title>
+  
+    <!-- Embedded Data URI Icon for guaranteed iOS / macOS rendering -->
+  <link rel="apple-touch-icon" href="data:image/png;base64,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">
+  <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
+  <link rel="apple-touch-icon-precomposed" href="data:image/png;base64,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">
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAHKUlEQVR4nO2dO5IcNxAFuRP0adJrQx7oScfRAXUcyYQnoy9CRRsbu0FxOf0D6lW9zAOQjcJLVPVnyJcvX799/wRgyiP6AgAiQQCwBgHAGgQAaxAArEEAsAYBwBoEAGsQAKxBALAGAcAaBABrEACsQQCwBgHAGgQAaxAArEEAsOZz9AVUp/319+U/o//5xy3XAv/nhd8Ea4T8LMhxDQRIFvhnIMQxEKBA6D8CGZ6DAMVC/xHI8HMQoHDoPwIZ3kAAo+D/SOfpkrcAM0J/R8iyXGdGLAUYEaiIAFVZRyRWAtwZGMWgVF/fCGwEuBqOjIFwXPNRygtACKiBpQBXgl/55KMuBgKc3eTKwf8RalRUgDMb6xT8H2nm9SojgPtGXqWZ1q+EAEc3r8LGjaKZ1TK9AEc2TGGz9l5v9LW2ZHW1+0nktkEumxRBP1Cvo3uhREoBjgaf8J+jH6xdRgnSCcCpP59eWIJUAhD+OHpRCdIIcOTmkZFnDP1AbbNIkEKALE9OXOiFJJAXgPBr0otIIC0A4demF5BAVgDCn4OeXAJJAQh/LnpiCSQF2AM3vFr0pA8g5ATYc0pkLXZ1+o59UesCUgIQ/vz0ZBLICED469ATSSAjwDMYe3LRk4ypEgI8Ow2yFBOO7ZtCFwgXQKEI4Lv/oQJkmPvXf//5lJno6+/i9wPhHeBXEP57wp9BAjsBlOf+LTDvQxMdoBFrmk0XvR+Q7gARVAj7r9ZRZX2pBVA9/X8VjkrBiVpLF+wC0wVQDH/0eHA3e9YSteYuJoH9CHQkBJUkqbwmWQHUTv8zm68emAxr6kJdwLYDqAd59prWgvWQEkDp9K+62ctvv6epSxfpAnYd4MombwG7GrLRXL3GtejhIC3ArNP/avgzkUGCLvCG+OHwwdMVMpz6Fa99Vm7CO4Dy6Z85PFfXsZp0gYfD6e8c/gwSROYntAPMsJ/w60vQA7tA+AikRrWT3219UgJEjz9HTy+XcBxd5xo8Co3MUVgHGN32CH8uCXrQGMQIBNY8ItoWp78GS6IuMGoMsu8ALnP/Ryzm6y8nQPQNW3XWYvV9VHz6sxf30y9bHUbkanoHiH71nW3T3erRJ+ej1AhUrT2rshaqcykBsp12aiyGdXlUmf8rnUoZWIPqfXe+Ho7zP2jTJ+bEbgRybPNHWMzqYycAQDkBmP+pu7UAe3Fr72dZjOpkJQDAUAEivwCFWvRJX4bSAcCah8sNsNNcewfLznplfwCRXgCAKyAAWIMAYA0CgDUIANYgAFjzOfoC3OCFoBZ0ALAGAcAaBABrEACsQQCwJr0ALh9tzWY1+cgwvQAAMgJE/PPWUJM26cdVdACwxkoA7gOoU0kBst+IZWUpUPcSAgCcxU4AxiDqEyYAT4JALSePKp/7VphHM7EE1fvufNmNQBuMQdSlpAB0AeosL4DKfQBdQLMes/PxcP7Zn8qmR7MmqcOIXJUagTYYg6ivtQBVT79RrObrHyZA5JehR7uAawjWg+se3V0j/nl9+w4A3oQJQBeIJdPpn1aA6KdBjEI5wh+ZI0Ygs/uB6utLJcCMtnfm9KoakjPrWiac/pEvR4cLED0GbSCBbvij8xM+As2y31kC5fC34E9jpgig0AWuhCerCJmvfVZuwjuAehd4JVuQrlzvYnL6ywgwk6sSqItw9RoXgbm/pADP2tnM0+DqJqtKcPW6lonhf7bfs8Zmuw5wpwQqItxxLYvZyf/Ky5ev377P/AtVzH/lzhDPDFHW61bLgP3/EbZt/l1hev/njAjViI6zmJ78YR1A7QR4z8iRRu09RFTwm9jehwigWIhXVOb6kRD+N2xvgl1HgurrS9MBlLtAxW4QHfwmutfSHSD6TWF0aKqsowm88ZXsAHuLE90JsnaD6OBn2N/wDqAQ7r1hUghUtWvtwfsf3gHUZ8QsXUEx8C3BnoZ3gMxzpMJJq3ANWfZLugNkmBedX2BV3UcpAbIVr8qvspz3T06AjEWEvPuW5h4g64zpQku6H5IC7D0lsha9Gm3nPqid/rICbCBBDlri8EsLsIEE2rTk4ZcXYAMJNGkFwp9CgA0k0KIVCb/sY9A7bnozFD8brWD9U3SAM0XlCdG9tILhTyfABhLMpxUNf7oR6MoJn21jFGgGNU4rgMPpFEkzqWt6AVxOqlk0s1qWEODsTW/2zbuTZlq/MgK4b+RZmnm9yglw5RFopY19BjUqLMDV9wCVRaAuJgLc9UKsggzUwFgA5xA4rvkoNgLc/XmEYjiqr28EVgKM/E4oIjBV1hGJpQAzP5i7I1BZrjMj1gK4fz3aTUP/HgQwFIHgv4EAJjIQ+p+DAIVlIPTPQYBiMhD6YyBAciEI/DUQIIEchHwcCADWpPtRPMCdIABYgwBgDQKANQgA1iAAWIMAYA0CgDUIANYgAFiDAGANAoA1CADWIABYgwBgDQKANQgAn5z5D0PBqceqAnD/AAAAAElFTkSuQmCC">
+
+  <!-- Apple & PWA Capabilities -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="iMac Remote">
+  <meta name="application-name" content="iMac Remote">
+  <meta name="theme-color" content="#090d16">
+  
+  <link rel="stylesheet" href="/style.css?v=4">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>iMac Remote</h1>
+        <span id="conn-badge" class="badge-online">Connected</span>
+      </div>
+      <button id="btn-settings" class="settings-btn" title="Settings">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Telemetry Card -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        System Status
+      </div>
+      <div class="telemetry-grid">
+        <div class="metric-item">
+          <div class="metric-label">CPU Load</div>
+          <div id="stat-cpu" class="metric-val">--%</div>
+          <div class="metric-bar">
+            <div id="stat-cpu-bar" class="metric-bar-fill" style="width: 0%; background: var(--accent-cyan);"></div>
+          </div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Memory</div>
+          <div id="stat-ram" class="metric-val">--%</div>
+          <div class="metric-bar">
+            <div id="stat-ram-bar" class="metric-bar-fill" style="width: 0%; background: var(--accent-emerald);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Controls -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        Quick Controls
+      </div>
+      <div class="actions-grid">
+        <button id="btn-lock" class="btn-action btn-cyan">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Lock Screen
+        </button>
+        <button id="btn-sleep" class="btn-action btn-cyan">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          Sleep Mac
+        </button>
+        <button id="btn-quit-apps" class="btn-action btn-amber">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          Close All Apps
+        </button>
+        <button id="btn-net-toggle" class="btn-action btn-emerald">
+          <svg id="net-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span id="net-btn-text">Block Internet</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Applications (macOS Force Quit style) -->
+    <div class="card">
+      <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line></svg>
+          Active Applications (<span id="apps-count">0</span>)
+        </span>
+        <button id="btn-refresh-apps" style="background: none; border: none; color: var(--accent-cyan); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Refresh</button>
+      </div>
+      <div id="apps-container" class="force-quit-list">
+        <div style="text-align: center; color: var(--text-muted); padding: 12px; font-size: 0.85rem;">Scanning active applications...</div>
+      </div>
+    </div>
+
+    <!-- Media / Volume Card -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        Volume Control (<span id="vol-label">--%</span>)
+      </div>
+      <div class="slider-group">
+        <button id="btn-mute" class="btn-action" style="min-height: 44px; padding: 8px 14px;">
+          <span id="mute-text">Mute</span>
+        </button>
+        <input type="range" id="vol-slider" min="0" max="100" value="50">
+      </div>
+    </div>
+
+    <!-- Power & Danger Zone -->
+    <div class="card">
+      <div class="card-title" style="color: var(--accent-rose);">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+        Power Options
+      </div>
+      <div class="actions-grid">
+        <button id="btn-restart" class="btn-action btn-danger">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+          Restart iMac
+        </button>
+        <button id="btn-shutdown" class="btn-action btn-danger">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+          Shut Down
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmation for Destructive Actions -->
+  <div id="confirm-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="modal-title">Confirm Action</h3>
+      <p id="modal-desc">Are you sure you want to proceed?</p>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="modal-btn modal-btn-cancel">Cancel</button>
+        <button id="modal-confirm" class="modal-btn modal-btn-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast">Command executed</div>
+
+  <script src="/app.js?v=4"></script>
+</body>
+</html>

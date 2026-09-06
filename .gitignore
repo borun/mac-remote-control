@@ -1,0 +1,21 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Local Secrets & Runtime Config
+config.json
+.internet_blocked
+
+# TLS Certificates & Keys (Never commit private keys)
+certs/
+
+# Logs
+*.log
+server.log
+server.err.log
+
+# macOS system files
+.DS_Store
