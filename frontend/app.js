@@ -45,6 +45,8 @@ const modalTitle = document.getElementById('modal-title');
 const modalDesc = document.getElementById('modal-desc');
 const modalCancel = document.getElementById('modal-cancel');
 const modalConfirm = document.getElementById('modal-confirm');
+const modalConfirmLabel = document.getElementById('modal-confirm-label');
+const modalHoldHint = document.getElementById('modal-hold-hint');
 const toastEl = document.getElementById('toast');
 
 // Timer Modal Elements
@@ -170,26 +172,120 @@ window.launchTargetApp = async function(name, path) {
   }
 };
 
-// Confirmation Prompt Helper
-function requestConfirmation(title, desc, actionFn) {
-  modalTitle.textContent = title;
-  modalDesc.textContent = desc;
-  pendingAction = actionFn;
-  confirmModal.classList.add('active');
+// Confirmation Prompt Helper with Hold-to-Confirm Support
+let holdStartTime = null;
+let holdAnimFrame = null;
+let isHolding = false;
+let isHoldRequired = false;
+const REQUIRED_HOLD_MS = 2000;
+
+function resetHoldState() {
+  isHolding = false;
+  holdStartTime = null;
+  if (holdAnimFrame) {
+    cancelAnimationFrame(holdAnimFrame);
+    holdAnimFrame = null;
+  }
+  const fill = modalConfirm.querySelector('.hold-fill');
+  if (fill) fill.style.width = '0%';
+  modalConfirm.classList.remove('holding');
+  if (isHoldRequired) {
+    if (modalConfirmLabel) modalConfirmLabel.textContent = 'Hold to Confirm';
+  }
 }
 
-modalCancel.addEventListener('click', () => {
-  confirmModal.classList.remove('active');
-  pendingAction = null;
-});
+function startHold(e) {
+  if (!isHoldRequired) return;
+  // Ignore non-primary mouse clicks (e.g. right click)
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  e.preventDefault();
 
-modalConfirm.addEventListener('click', async () => {
+  isHolding = true;
+  holdStartTime = performance.now();
+  modalConfirm.classList.add('holding');
+
+  const fill = modalConfirm.querySelector('.hold-fill');
+
+  function tick(now) {
+    if (!isHolding) return;
+    const elapsed = now - holdStartTime;
+    const pct = Math.min(100, (elapsed / REQUIRED_HOLD_MS) * 100);
+    if (fill) fill.style.width = `${pct}%`;
+    const remainingSec = Math.max(0, ((REQUIRED_HOLD_MS - elapsed) / 1000)).toFixed(1);
+    if (modalConfirmLabel) modalConfirmLabel.textContent = `Hold (${remainingSec}s)`;
+
+    if (elapsed >= REQUIRED_HOLD_MS) {
+      // Completed hold!
+      isHolding = false;
+      if (navigator.vibrate) {
+        try { navigator.vibrate([40, 60, 40]); } catch (_) {}
+      }
+      executeConfirmation();
+      return;
+    }
+    holdAnimFrame = requestAnimationFrame(tick);
+  }
+
+  holdAnimFrame = requestAnimationFrame(tick);
+}
+
+function stopHold() {
+  if (!isHoldRequired || !isHolding) return;
+  resetHoldState();
+}
+
+// Attach hold listeners to modalConfirm
+modalConfirm.addEventListener('mousedown', startHold);
+window.addEventListener('mouseup', stopHold);
+
+modalConfirm.addEventListener('touchstart', startHold, { passive: false });
+window.addEventListener('touchend', stopHold);
+window.addEventListener('touchcancel', stopHold);
+
+async function executeConfirmation() {
   confirmModal.classList.remove('active');
+  resetHoldState();
   if (pendingAction) {
     const act = pendingAction;
     pendingAction = null;
     await act();
   }
+}
+
+function requestConfirmation(title, desc, actionFn, requireHold = false) {
+  modalTitle.textContent = title;
+  modalDesc.textContent = desc;
+  pendingAction = actionFn;
+  isHoldRequired = requireHold;
+
+  resetHoldState();
+
+  if (requireHold) {
+    modalConfirm.classList.add('modal-btn-hold');
+    if (modalHoldHint) modalHoldHint.style.display = 'block';
+    if (modalConfirmLabel) modalConfirmLabel.textContent = 'Hold to Confirm';
+  } else {
+    modalConfirm.classList.remove('modal-btn-hold');
+    if (modalHoldHint) modalHoldHint.style.display = 'none';
+    if (modalConfirmLabel) modalConfirmLabel.textContent = 'Confirm';
+  }
+
+  confirmModal.classList.add('active');
+}
+
+modalCancel.addEventListener('click', () => {
+  confirmModal.classList.remove('active');
+  resetHoldState();
+  pendingAction = null;
+});
+
+modalConfirm.addEventListener('click', async (e) => {
+  // If hold is required, click events are ignored (must complete 2s hold)
+  if (isHoldRequired) {
+    e.preventDefault();
+    return;
+  }
+  await executeConfirmation();
 });
 
 // Timer Setup Modal Logic
@@ -623,7 +719,8 @@ btnRestart.addEventListener('click', () => {
     async () => {
       const res = await apiCall('/api/action/restart', 'POST');
       if (res) showToast(res.message);
-    }
+    },
+    true
   );
 });
 
@@ -634,7 +731,8 @@ btnShutdown.addEventListener('click', () => {
     async () => {
       const res = await apiCall('/api/action/shutdown', 'POST');
       if (res) showToast(res.message);
-    }
+    },
+    true
   );
 });
 

@@ -19,7 +19,7 @@
   <meta name="application-name" content="iMac Remote">
   <meta name="theme-color" content="#090d16">
   
-  <link rel="stylesheet" href="/style.css?v=13">
+  <link rel="stylesheet" href="/style.css?v=14">
 </head>
 <body>
   <div class="container">
@@ -163,9 +163,13 @@
     <div class="modal-box">
       <h3 id="modal-title">Confirm Action</h3>
       <p id="modal-desc">Are you sure you want to proceed?</p>
+      <div id="modal-hold-hint" class="modal-hold-hint" style="display: none;">Press & hold button for 2 seconds</div>
       <div class="modal-actions">
         <button id="modal-cancel" class="modal-btn modal-btn-cancel">Cancel</button>
-        <button id="modal-confirm" class="modal-btn modal-btn-confirm">Confirm</button>
+        <button id="modal-confirm" class="modal-btn modal-btn-confirm">
+          <span class="hold-fill"></span>
+          <span class="hold-label" id="modal-confirm-label">Confirm</span>
+        </button>
       </div>
     </div>
   </div>
@@ -224,6 +228,6 @@
   <!-- Toast Notification -->
   <div id="toast">Command executed</div>
 
-  <script src="/app.js?v=13"></script>
+  <script src="/app.js?v=14"></script>
 </body>
 </html>

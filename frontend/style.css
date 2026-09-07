@@ -646,6 +646,60 @@ header {
 .modal-btn-confirm {
   background: var(--accent-rose);
   color: #fff;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Hold-to-Confirm Button Styles */
+.modal-btn-hold {
+  background: rgba(244, 63, 94, 0.2) !important;
+  border: 1px solid var(--accent-rose) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.modal-btn-hold .hold-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--accent-rose);
+  opacity: 0.85;
+  transition: width 0.05s linear;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.modal-btn-hold.holding .hold-fill {
+  /* Dynamic width driven by JS RAF / timer */
+}
+
+.modal-btn-hold .hold-label {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.modal-hold-hint {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--accent-rose);
+  margin-top: -12px;
+  margin-bottom: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 @keyframes fadeIn {
