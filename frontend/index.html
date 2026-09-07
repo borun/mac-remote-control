@@ -19,7 +19,7 @@
   <meta name="application-name" content="iMac Remote">
   <meta name="theme-color" content="#090d16">
   
-  <link rel="stylesheet" href="/style.css?v=15">
+  <link rel="stylesheet" href="/style.css?v=16">
 </head>
 <body>
   <div class="container">
@@ -262,9 +262,52 @@
     </div>
   </div>
 
+  <!-- Settings & Device Pairing Modal -->
+  <div id="settings-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 380px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Connection & Security</h3>
+        <button id="settings-modal-close" style="background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; padding: 2px;">✕</button>
+      </div>
+
+      <!-- Localhost-Only QR Pairing Section -->
+      <div id="qr-pairing-section" style="display: none; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px; text-align: center;">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan); margin-bottom: 4px;">Pair New Device</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px;">Scan with iPhone/iPad camera to pair instantly:</div>
+        <div style="display: inline-block; background: #fff; padding: 8px; border-radius: 8px;">
+          <img id="settings-qr-img" alt="Pairing QR Code" style="width: 160px; height: 160px; display: block;">
+        </div>
+      </div>
+
+      <!-- Remote View Disclaimer (Shown when browsing from phone / remote) -->
+      <div id="qr-remote-notice" style="display: none; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px;">
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--accent-cyan); flex-shrink: 0; margin-top: 2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+            <strong style="color: #fff;">Pairing Security Active:</strong> For your security, the pairing QR code is only generated and viewable directly on the host iMac (<code>localhost</code>).
+          </div>
+        </div>
+      </div>
+
+      <!-- API Token Field -->
+      <div style="margin-bottom: 16px;">
+        <label for="settings-token-input" style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 500;">API Secret Token:</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="password" id="settings-token-input" placeholder="Enter API Token..." style="flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); padding: 8px 12px; color: #fff; font-size: 0.85rem; font-family: monospace; outline: none;">
+          <button id="btn-toggle-token-vis" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--radius-md); color: #fff; padding: 0 10px; cursor: pointer; font-size: 0.8rem;">Show</button>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 14px;">
+        <button id="btn-save-token" class="modal-btn" style="background: var(--accent-cyan); color: #000; font-weight: 700;">Save Token</button>
+        <button id="btn-clear-token" class="modal-btn" style="background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); border: 1px solid rgba(244, 63, 94, 0.3);">Forget Device</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast">Command executed</div>
 
-  <script src="/app.js?v=15"></script>
+  <script src="/app.js?v=16"></script>
 </body>
 </html>

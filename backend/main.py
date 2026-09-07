@@ -1,9 +1,10 @@
 import os
 import io
+import time
 import asyncio
 from typing import Optional
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response
@@ -166,7 +167,15 @@ async def capture_screen(download: bool = False):
     return Response(content=img_bytes, media_type="image/jpeg", headers=headers)
 
 @app.get("/api/auth/qr")
-def get_auth_qr(token: str = Query(...)):
+def get_auth_qr(request: Request, token: str = Query(...)):
+    # Restrict QR pairing strictly to localhost (physical iMac console)
+    client_host = request.client.host if request.client else ""
+    if client_host not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(
+            status_code=403,
+            detail="Security Restriction: Pairing QR code can only be generated directly on the host iMac (localhost)."
+        )
+
     config = get_or_create_config()
     if token != config.get("api_token"):
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -184,7 +193,7 @@ def get_auth_qr(token: str = Query(...)):
     img = qr.make_image(fill_color="black", back_color="white")
     
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    img.save(buf)
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
 

@@ -838,9 +838,97 @@ btnMute.addEventListener('click', async () => {
   }
 });
 
-btnSettings.addEventListener('click', () => {
-  promptForToken();
-});
+// Settings & Pairing Modal Elements
+const settingsModal = document.getElementById('settings-modal');
+const settingsModalClose = document.getElementById('settings-modal-close');
+const qrPairingSection = document.getElementById('qr-pairing-section');
+const qrRemoteNotice = document.getElementById('qr-remote-notice');
+const settingsQrImg = document.getElementById('settings-qr-img');
+const settingsTokenInput = document.getElementById('settings-token-input');
+const btnToggleTokenVis = document.getElementById('btn-toggle-token-vis');
+const btnSaveToken = document.getElementById('btn-save-token');
+const btnClearToken = document.getElementById('btn-clear-token');
+
+if (btnSettings) {
+  btnSettings.addEventListener('click', () => {
+    if (!settingsModal) return;
+    
+    // Fill current token
+    if (settingsTokenInput) {
+      settingsTokenInput.value = apiToken || '';
+      settingsTokenInput.type = 'password';
+      if (btnToggleTokenVis) btnToggleTokenVis.textContent = 'Show';
+    }
+
+    // Determine if browsing on localhost (direct physical access to host iMac)
+    const host = window.location.hostname;
+    const isLocalhost = (host === 'localhost' || host === '127.0.0.1' || host === '[::1]');
+
+    if (isLocalhost && apiToken) {
+      if (qrPairingSection) qrPairingSection.style.display = 'block';
+      if (qrRemoteNotice) qrRemoteNotice.style.display = 'none';
+      if (settingsQrImg) {
+        settingsQrImg.src = `/api/auth/qr?token=${encodeURIComponent(apiToken)}&t=${Date.now()}`;
+      }
+    } else {
+      // Remote device (e.g. mobile Safari / LAN IP): hide QR code for security
+      if (qrPairingSection) qrPairingSection.style.display = 'none';
+      if (qrRemoteNotice) qrRemoteNotice.style.display = 'block';
+    }
+
+    settingsModal.classList.add('active');
+  });
+}
+
+if (settingsModalClose) {
+  settingsModalClose.addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+  });
+}
+
+if (btnToggleTokenVis && settingsTokenInput) {
+  btnToggleTokenVis.addEventListener('click', () => {
+    if (settingsTokenInput.type === 'password') {
+      settingsTokenInput.type = 'text';
+      btnToggleTokenVis.textContent = 'Hide';
+    } else {
+      settingsTokenInput.type = 'password';
+      btnToggleTokenVis.textContent = 'Show';
+    }
+  });
+}
+
+if (btnSaveToken && settingsTokenInput) {
+  btnSaveToken.addEventListener('click', () => {
+    const val = settingsTokenInput.value.trim();
+    if (val) {
+      apiToken = val;
+      localStorage.setItem('imac_api_token', apiToken);
+      showToast('API token saved');
+      settingsModal.classList.remove('active');
+      fetchTelemetry();
+    } else {
+      showToast('Token cannot be empty');
+    }
+  });
+}
+
+if (btnClearToken) {
+  btnClearToken.addEventListener('click', () => {
+    requestConfirmation(
+      'Forget Device / Clear Token',
+      'Remove saved authentication token from this device? You will need to re-pair to control your iMac.',
+      () => {
+        localStorage.removeItem('imac_api_token');
+        apiToken = '';
+        if (settingsTokenInput) settingsTokenInput.value = '';
+        settingsModal.classList.remove('active');
+        showToast('Token removed from this device');
+        setOnlineState(false);
+      }
+    );
+  });
+}
 
 // Live second ticker for inline timer badges & tray buttons
 setInterval(() => {
