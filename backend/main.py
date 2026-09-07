@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response
 from pydantic import BaseModel
 import qrcode
 
@@ -146,6 +146,24 @@ async def action_set_volume(req: VolumeRequest):
 async def action_toggle_mute():
     success, msg = MacSystemController.toggle_mute()
     return {"success": success, "message": msg}
+
+@app.get("/api/screen/capture", dependencies=[Depends(verify_token)])
+async def capture_screen(download: bool = False):
+    """Captures live screen and returns JPEG image."""
+    success, img_bytes, err = MacSystemController.take_screenshot()
+    if not success or not img_bytes:
+        raise HTTPException(status_code=500, detail=f"Screenshot failed: {err}")
+    
+    headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    if download:
+        filename = f"iMac-Screen-{int(time.time())}.jpg"
+        headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    return Response(content=img_bytes, media_type="image/jpeg", headers=headers)
 
 @app.get("/api/auth/qr")
 def get_auth_qr(token: str = Query(...)):

@@ -67,6 +67,16 @@ const launchModalClose = document.getElementById('launch-modal-close');
 const appSearchInput = document.getElementById('app-search-input');
 const installedAppsList = document.getElementById('installed-apps-list');
 
+// Screen Modal Elements
+const btnOpenScreenModal = document.getElementById('btn-open-screen-modal');
+const screenModal = document.getElementById('screen-modal');
+const screenModalClose = document.getElementById('screen-modal-close');
+const screenTimestamp = document.getElementById('screen-timestamp');
+const screenPreviewImg = document.getElementById('screen-preview-img');
+const screenLoadingSpinner = document.getElementById('screen-loading-spinner');
+const btnRefreshScreen = document.getElementById('btn-refresh-screen');
+const btnDownloadScreen = document.getElementById('btn-download-screen');
+
 let installedAppsCache = [];
 
 let pendingAction = null;
@@ -171,6 +181,80 @@ window.launchTargetApp = async function(name, path) {
     showToast(res.message);
   }
 };
+
+// Screenshot Modal Logic
+async function captureAndDisplayScreen() {
+  if (!apiToken) {
+    promptForToken();
+    return;
+  }
+
+  screenLoadingSpinner.style.display = 'flex';
+  screenPreviewImg.style.display = 'none';
+  screenTimestamp.textContent = 'Capturing...';
+
+  try {
+    const res = await fetch(`/api/screen/capture?t=${Date.now()}`, {
+      headers: { 'Authorization': `Bearer ${apiToken}` }
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({ detail: 'Failed to capture screenshot.' }));
+      showToast(errJson.detail || 'Failed to capture screenshot');
+      screenLoadingSpinner.style.display = 'none';
+      screenTimestamp.textContent = 'Error';
+      return;
+    }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    screenPreviewImg.onload = () => {
+      screenLoadingSpinner.style.display = 'none';
+      screenPreviewImg.style.display = 'block';
+      const now = new Date();
+      screenTimestamp.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+    screenPreviewImg.src = objectUrl;
+  } catch (err) {
+    showToast('Failed to reach iMac for screenshot');
+    screenLoadingSpinner.style.display = 'none';
+    screenTimestamp.textContent = 'Offline';
+  }
+}
+
+if (btnOpenScreenModal) {
+  btnOpenScreenModal.addEventListener('click', () => {
+    screenModal.classList.add('active');
+    captureAndDisplayScreen();
+  });
+}
+
+if (screenModalClose) {
+  screenModalClose.addEventListener('click', () => {
+    screenModal.classList.remove('active');
+  });
+}
+
+if (btnRefreshScreen) {
+  btnRefreshScreen.addEventListener('click', () => {
+    captureAndDisplayScreen();
+  });
+}
+
+if (btnDownloadScreen) {
+  btnDownloadScreen.addEventListener('click', () => {
+    if (!apiToken) return;
+    showToast('Downloading screenshot...');
+    const dlUrl = `/api/screen/capture?download=true&token=${encodeURIComponent(apiToken)}&t=${Date.now()}`;
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = `iMac-Screen-${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+}
 
 // Confirmation Prompt Helper with Hold-to-Confirm Support
 let holdStartTime = null;

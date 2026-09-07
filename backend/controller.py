@@ -346,3 +346,41 @@ class MacSystemController:
             "running_apps": cls.get_running_user_apps(),
             "boot_time": boot_time
         }
+
+    @classmethod
+    def take_screenshot(cls) -> tuple[bool, bytes, str]:
+        """
+        Captures the iMac screen silently into a temporary JPEG file.
+        Returns (success, image_bytes, error_message).
+        """
+        tmp_path = Path("/tmp/imac_remote_capture.jpg")
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except Exception:
+                pass
+
+        # -x: silent (no shutter sound)
+        # -t jpg: save as JPEG
+        # -C: capture mouse cursor
+        code, out, err = cls._run_cmd(["/usr/sbin/screencapture", "-x", "-t", "jpg", "-C", str(tmp_path)])
+        if code == 0 and tmp_path.exists():
+            try:
+                img_data = tmp_path.read_bytes()
+                tmp_path.unlink()
+                return True, img_data, ""
+            except Exception as e:
+                return False, b"", f"Failed to read screenshot file: {e}"
+
+        # If -C failed or permission issue, retry without -C
+        code2, out2, err2 = cls._run_cmd(["/usr/sbin/screencapture", "-x", "-t", "jpg", str(tmp_path)])
+        if code2 == 0 and tmp_path.exists():
+            try:
+                img_data = tmp_path.read_bytes()
+                tmp_path.unlink()
+                return True, img_data, ""
+            except Exception as e:
+                return False, b"", f"Failed to read screenshot file: {e}"
+
+        err_msg = err or err2 or out or out2 or "Could not capture display (check macOS Screen Recording permissions in System Settings > Privacy & Security)."
+        return False, b"", err_msg

@@ -4,7 +4,8 @@ import secrets
 import logging
 from pathlib import Path
 from datetime import datetime
-from fastapi import HTTPException, Security, status
+from typing import Optional
+from fastapi import HTTPException, Security, Query, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger("mac_security")
@@ -35,12 +36,21 @@ def get_or_create_config() -> dict:
     os.chmod(CONFIG_FILE, 0o600)
     return config
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    """FastAPI dependency to verify Bearer token."""
+def verify_token(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security_bearer),
+    token: Optional[str] = Query(None)
+):
+    """FastAPI dependency to verify Bearer header or token query parameter."""
     config = get_or_create_config()
     expected_token = config.get("api_token")
 
-    if not credentials or not secrets.compare_digest(credentials.credentials, expected_token):
+    provided_token = None
+    if credentials and credentials.credentials:
+        provided_token = credentials.credentials
+    elif token:
+        provided_token = token
+
+    if not provided_token or not secrets.compare_digest(provided_token, expected_token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing authorization token",
