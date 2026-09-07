@@ -131,31 +131,71 @@ class MacSystemController:
 
 
     @classmethod
-    def get_installed_applications(cls) -> List[str]:
-        """Scans standard macOS application directories for installed applications."""
-        app_dirs = ['/Applications', '/System/Applications', '/System/Applications/Utilities']
-        apps = set()
+    def get_installed_applications(cls) -> List[Dict[str, str]]:
+        """
+        Scans standard macOS application directories as well as ~/Applications
+        (including Chrome Apps, Edge PWAs, and nested user apps).
+        Returns a list of dicts: [{'name': 'AppName', 'path': '/path/to/AppName.app'}, ...]
+        """
+        app_dirs = [
+            '/Applications',
+            '/System/Applications',
+            '/System/Applications/Utilities'
+        ]
+        user_app_dir = Path.home() / 'Applications'
+        if user_app_dir.exists():
+            app_dirs.append(str(user_app_dir))
+
+        apps_dict = {}  # name -> full_path
+        ignored = {'Install macOS', 'Uninstall', 'Helper', 'Feedback Assistant', 'Migration Assistant'}
+
         for d in app_dirs:
             p = Path(d)
-            if p.exists():
-                try:
-                    for item in p.iterdir():
-                        if item.name.endswith('.app'):
-                            apps.add(item.stem)
-                except Exception:
-                    pass
-        # Filter out internal helper services and system utilities that aren't user apps
-        ignored = {'Install macOS', 'Uninstall', 'Helper', 'Feedback Assistant', 'Migration Assistant'}
-        filtered = [a for a in sorted(list(apps)) if not any(ign in a for ign in ignored)]
-        return filtered
+            if not p.exists():
+                continue
+            try:
+                # Scan top-level .app
+                for item in p.iterdir():
+                    if item.is_dir() and item.name.endswith('.app'):
+                        stem = item.stem
+                        if not any(ign in stem for ign in ignored):
+                            apps_dict[stem] = str(item)
+                    elif item.is_dir():
+                        # Subdirectories like ~/Applications/Chrome Apps.localized or Utilities
+                        try:
+                            for sub in item.iterdir():
+                                if sub.is_dir() and sub.name.endswith('.app'):
+                                    stem = sub.stem
+                                    if not any(ign in stem for ign in ignored):
+                                        apps_dict[stem] = str(sub)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        sorted_apps = [
+            {"name": name, "path": path}
+            for name, path in sorted(apps_dict.items(), key=lambda x: x[0].lower())
+        ]
+        return sorted_apps
 
     @classmethod
-    def launch_application(cls, app_name: str) -> tuple[bool, str]:
-        """Launches a macOS application by its name using open -a."""
-        code, out, err = cls._run_cmd(["open", "-a", app_name])
+    def launch_application(cls, app_target: str) -> tuple[bool, str]:
+        """
+        Launches a macOS application by its name or full .app path.
+        """
+        target = app_target.strip()
+        # If it's an existing filesystem path or ends with .app, launch directly via path
+        if target.endswith('.app') or os.path.exists(target):
+            cmd = ["open", target]
+        else:
+            cmd = ["open", "-a", target]
+
+        code, out, err = cls._run_cmd(cmd)
+        display_name = Path(target).stem if target.endswith('.app') else target
         if code == 0:
-            return True, f"Launched {app_name} on your iMac."
-        return False, f"Failed to launch {app_name}: {err or out}"
+            return True, f"Launched {display_name} on your iMac."
+        return False, f"Failed to launch {display_name}: {err or out}"
 
     @classmethod
     def get_running_user_apps(cls) -> List[Dict[str, Any]]:

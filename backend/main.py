@@ -31,6 +31,7 @@ class VolumeRequest(BaseModel):
 
 class LaunchAppRequest(BaseModel):
     app_name: str
+    app_path: Optional[str] = None
 
 class QuitAppRequest(BaseModel):
     pid: int
@@ -64,9 +65,10 @@ async def get_installed_apps():
 
 @app.post("/api/action/launch-app", response_model=ActionResponse, dependencies=[Depends(verify_token)])
 async def launch_app(req: LaunchAppRequest):
-    if not req.app_name or not req.app_name.strip():
-        raise HTTPException(status_code=400, detail="App name cannot be empty")
-    success, msg = MacSystemController.launch_application(req.app_name.strip())
+    target = (req.app_path and req.app_path.strip()) or (req.app_name and req.app_name.strip())
+    if not target:
+        raise HTTPException(status_code=400, detail="App target (name or path) cannot be empty")
+    success, msg = MacSystemController.launch_application(target)
     return {"success": success, "message": msg}
 
 @app.post("/api/action/lock", response_model=ActionResponse, dependencies=[Depends(verify_token)])

@@ -123,10 +123,12 @@ function renderInstalledApps(apps) {
     return;
   }
 
-  installedAppsList.innerHTML = apps.map(name => {
+  installedAppsList.innerHTML = apps.map(app => {
+    const name = typeof app === 'string' ? app : (app.name || 'Unknown');
+    const path = typeof app === 'object' && app.path ? app.path : '';
     const initial = name.charAt(0).toUpperCase();
     return `
-      <div class="launch-app-item" onclick="launchTargetApp('${escapeJs(name)}')">
+      <div class="launch-app-item" onclick="launchTargetApp('${escapeJs(name)}', '${escapeJs(path)}')">
         <div class="launch-app-left">
           <div class="launch-icon-placeholder">${initial}</div>
           <span class="launch-app-name">${escapeHtml(name)}</span>
@@ -144,16 +146,22 @@ if (appSearchInput) {
       renderInstalledApps(installedAppsCache);
       return;
     }
-    const filtered = installedAppsCache.filter(app => app.toLowerCase().includes(query));
+    const filtered = installedAppsCache.filter(app => {
+      const name = typeof app === 'string' ? app : (app.name || '');
+      return name.toLowerCase().includes(query);
+    });
     renderInstalledApps(filtered);
   });
 }
 
-window.launchTargetApp = async function(name) {
+window.launchTargetApp = async function(name, path) {
   launchModal.classList.remove('active');
   showToast(`Launching ${name} on iMac...`);
   
-  const res = await apiCall('/api/action/launch-app', 'POST', { app_name: name });
+  const payload = { app_name: name };
+  if (path) payload.app_path = path;
+
+  const res = await apiCall('/api/action/launch-app', 'POST', payload);
   if (res && res.success) {
     showToast(res.message);
     setTimeout(fetchTelemetry, 1500);
