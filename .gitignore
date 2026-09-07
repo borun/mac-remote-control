@@ -19,3 +19,6 @@ server.err.log
 
 # macOS system files
 .DS_Store
+
+# Compiled Native Binaries
+bin/

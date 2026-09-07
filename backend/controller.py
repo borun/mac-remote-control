@@ -348,9 +348,41 @@ class MacSystemController:
         }
 
     @classmethod
+    def _ensure_screenshot_helper(cls) -> Path | None:
+        """
+        Compiles the dedicated imac_screenshot_helper Swift binary if not already present.
+        This provides strict permission isolation so python3 itself never requires screen access.
+        """
+        bin_dir = PROJECT_ROOT / "bin"
+        helper_bin = bin_dir / "imac_screenshot_helper"
+        helper_src = PROJECT_ROOT / "helper" / "imac_screenshot_helper.swift"
+
+        if helper_bin.exists() and os.access(helper_bin, os.X_OK):
+            return helper_bin
+
+        if not helper_src.exists():
+            return None
+
+        # Attempt to compile with swiftc
+        try:
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            code, _, err = cls._run_cmd(["swiftc", "-O", str(helper_src), "-o", str(helper_bin)])
+            if code == 0 and helper_bin.exists():
+                os.chmod(helper_bin, 0o755)
+                logger.info(f"Compiled isolated screenshot helper: {helper_bin}")
+                return helper_bin
+            logger.warning(f"Failed to auto-compile screenshot helper: {err}")
+        except Exception as e:
+            logger.warning(f"Error compiling screenshot helper: {e}")
+
+        return None
+
+    @classmethod
     def take_screenshot(cls) -> tuple[bool, bytes, str]:
         """
         Captures the iMac screen silently into a temporary JPEG file.
+        Prioritizes the isolated imac_screenshot_helper binary so that
+        screen recording permission is granted strictly to the helper, NOT python3.
         Returns (success, image_bytes, error_message).
         """
         tmp_path = Path("/tmp/imac_remote_capture.jpg")
@@ -360,9 +392,20 @@ class MacSystemController:
             except Exception:
                 pass
 
-        # -x: silent (no shutter sound)
-        # -t jpg: save as JPEG
-        # -C: capture mouse cursor
+        # 1. Try isolated native helper binary first
+        helper_bin = cls._ensure_screenshot_helper()
+        if helper_bin:
+            code, out, err = cls._run_cmd([str(helper_bin), str(tmp_path)])
+            if code == 0 and tmp_path.exists():
+                try:
+                    img_data = tmp_path.read_bytes()
+                    tmp_path.unlink()
+                    return True, img_data, ""
+                except Exception as e:
+                    return False, b"", f"Failed to read captured image: {e}"
+            logger.warning(f"Isolated helper failed (exit {code}): {err or out}. Falling back to screencapture.")
+
+        # 2. Fallback to native macOS screencapture
         code, out, err = cls._run_cmd(["/usr/sbin/screencapture", "-x", "-t", "jpg", "-C", str(tmp_path)])
         if code == 0 and tmp_path.exists():
             try:
@@ -372,7 +415,7 @@ class MacSystemController:
             except Exception as e:
                 return False, b"", f"Failed to read screenshot file: {e}"
 
-        # If -C failed or permission issue, retry without -C
+        # Fallback without -C
         code2, out2, err2 = cls._run_cmd(["/usr/sbin/screencapture", "-x", "-t", "jpg", str(tmp_path)])
         if code2 == 0 and tmp_path.exists():
             try:
@@ -382,5 +425,8 @@ class MacSystemController:
             except Exception as e:
                 return False, b"", f"Failed to read screenshot file: {e}"
 
-        err_msg = err or err2 or out or out2 or "Could not capture display (check macOS Screen Recording permissions in System Settings > Privacy & Security)."
+        err_msg = (
+            "Could not capture display. Please check macOS Screen Recording permissions in "
+            "System Settings > Privacy & Security > Screen Recording."
+        )
         return False, b"", err_msg

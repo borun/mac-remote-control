@@ -98,5 +98,29 @@ To control your iMac securely outside your home network without port-forwarding 
 
 ---
 
+## Screen Capture & Security Isolation
+
+The app includes a live screen capture preview and download feature designed with **permission isolation**:
+
+1. **Security Architecture**:
+   - Rather than granting broad Screen Recording permissions to `python3` (which would allow any Python script on your system to capture your screen), the app compiles a tiny, dedicated native helper (`bin/imac_screenshot_helper`) from `helper/imac_screenshot_helper.swift`.
+   - Screen Recording permission in macOS is granted **strictly to `imac_screenshot_helper`**, leaving your Python environment completely unprivileged.
+2. **First-Time Permission Setup**:
+   - The first time you tap **Screen Shot** in the PWA, macOS will prompt:
+     > *"imac_screenshot_helper would like to record this computer's screen"*
+   - Click **Allow** (or enable it in **System Settings > Privacy & Security > Screen Recording**).
+3. **Manual Compilation (if swiftc auto-compile fails)**:
+   - If `swiftc` command-line tools are not installed, run:
+     ```bash
+     xcode-select --install
+     ```
+   - To manually compile the helper binary at any time:
+     ```bash
+     swiftc -O helper/imac_screenshot_helper.swift -o bin/imac_screenshot_helper
+     ```
+   - If the helper is not compiled or fails, the backend automatically falls back to native `/usr/sbin/screencapture`.
+
+---
+
 ## License
 MIT License. Free for personal and commercial use.
