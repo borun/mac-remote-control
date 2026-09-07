@@ -603,3 +603,168 @@ header {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Option A: iOS Tap-to-Expand App Cards */
+.force-quit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.expandable-app-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.expandable-app-card.expanded {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.app-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  gap: 10px;
+}
+
+.app-card-header:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-title-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-name-full {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+/* Compact timer badge right after the app name */
+.app-timer-badge-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  color: #fef08a;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  animation: pulseTimer 2s infinite ease-in-out;
+}
+
+.app-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chevron-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+}
+
+.expandable-app-card.expanded .chevron-icon {
+  transform: rotate(180deg);
+  color: var(--accent-cyan);
+}
+
+/* Hidden action tray that slides open on tap */
+.app-actions-tray {
+  display: none;
+  padding: 0 14px 12px 14px;
+  animation: slideDown 0.2s ease forwards;
+}
+
+.expandable-app-card.expanded .app-actions-tray {
+  display: block;
+}
+
+.tray-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 12px;
+}
+
+.tray-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.tray-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+}
+
+.tray-btn:active {
+  transform: scale(0.96);
+}
+
+.tray-btn-timer {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan);
+}
+
+.tray-btn-timer.has-timer {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fef08a;
+}
+
+.tray-btn-quit {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.tray-btn-force {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

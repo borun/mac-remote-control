@@ -1,9 +1,9 @@
-const CACHE_NAME = 'imac-remote-v7';
+const CACHE_NAME = 'imac-remote-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=7',
-  '/app.js?v=7',
+  '/style.css?v=8',
+  '/app.js?v=8',
   '/manifest.webmanifest',
   '/favicon.ico',
   '/icons/apple-touch-icon-180x180.png',

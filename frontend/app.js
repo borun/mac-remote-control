@@ -1,4 +1,4 @@
-// iMac Remote Controller Client Script v7 with Dynamic Timer Button
+// iMac Remote Controller Client Script v8 with Tap-to-Expand App Cards & Inline Timer Badge
 
 // 1. Manage Token
 const urlParams = new URLSearchParams(window.location.search);
@@ -61,6 +61,7 @@ let pendingAction = null;
 let pendingTimerApp = null;
 let selectedTimerMinutes = 15;
 let activeTimers = {};
+let expandedPids = new Set(); // Remember expanded cards across refreshes
 let consecutiveFailures = 0;
 let isFetching = false;
 let isInternetBlocked = false;
@@ -159,13 +160,12 @@ window.openTimerModal = function(pid, name) {
   timerModal.classList.add('active');
 };
 
-window.handleTimerClick = function(pid, name) {
+window.handleTimerAction = function(pid, name) {
   const timer = activeTimers[pid] || activeTimers[String(pid)];
   if (timer) {
-    // If timer already active, offer to cancel or reset it
     requestConfirmation(
-      `Manage Timer: ${name}`,
-      `A close timer is currently running (closing in ${formatRemainingTime(timer.remaining_seconds)}). Do you want to cancel this timer?`,
+      `Cancel Timer for ${name}`,
+      `A close timer is currently ticking (closing in ${formatRemainingTime(timer.remaining_seconds)}). Do you want to cancel this timer?`,
       async () => {
         const res = await apiCall('/api/action/app-timer/cancel', 'POST', { pid: parseInt(pid) });
         if (res && res.success) {
@@ -175,8 +175,20 @@ window.handleTimerClick = function(pid, name) {
       }
     );
   } else {
-    // If no timer, open setup modal
     openTimerModal(pid, name);
+  }
+};
+
+window.toggleAppCard = function(pid) {
+  const card = document.getElementById(`app-card-${pid}`);
+  if (!card) return;
+  
+  if (expandedPids.has(pid)) {
+    expandedPids.delete(pid);
+    card.classList.remove('expanded');
+  } else {
+    expandedPids.add(pid);
+    card.classList.add('expanded');
   }
 };
 
@@ -313,7 +325,7 @@ async function fetchTelemetry() {
   // Active Timers map
   activeTimers = data.active_timers || {};
 
-  // Running Apps Render
+  // Running Apps Render (Option A: Tap-to-Expand Cards)
   renderAppsList(data.running_apps || []);
 }
 
@@ -335,31 +347,65 @@ function renderAppsList(apps) {
 
     // Check if this app has an active timer
     const timer = activeTimers[pid] || activeTimers[String(pid)];
+    const isExpanded = expandedPids.has(pid);
 
     return `
-      <div class="force-quit-item" data-pid="${pid}">
-        <div class="app-meta">
-          <div class="app-icon-placeholder">${initial}</div>
-          <div class="app-details">
-            <span class="app-name-text" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-            <span class="app-pid-text">PID: ${pid}</span>
+      <div class="expandable-app-card ${isExpanded ? 'expanded' : ''}" id="app-card-${pid}">
+        <!-- Card Header (Always Visible, Full Width for Name + Inline Timer) -->
+        <div class="app-card-header" onclick="${isFinder ? '' : `toggleAppCard(${pid})`}">
+          <div class="app-card-left">
+            <div class="app-icon-placeholder">${initial}</div>
+            <div class="app-details">
+              <div class="app-title-wrap">
+                <span class="app-name-full">${escapeHtml(name)}</span>
+                ${timer ? `
+                  <span 
+                    class="app-timer-badge-inline" 
+                    id="timer-badge-${pid}"
+                    title="Tap card to manage timer">
+                    ⏱ ${formatRemainingTime(timer.remaining_seconds)}
+                  </span>
+                ` : ''}
+              </div>
+              <span class="app-pid-text">PID: ${pid}</span>
+            </div>
+          </div>
+          
+          <div class="app-card-right">
+            ${isFinder ? `
+              <span style="font-size: 0.75rem; color: var(--text-muted); padding: 4px 8px;">System</span>
+            ` : `
+              <svg class="chevron-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            `}
           </div>
         </div>
-        <div class="app-btn-group">
-          ${isFinder ? `
-            <span style="font-size: 0.75rem; color: var(--text-muted); padding: 4px 8px;">System</span>
-          ` : `
-            <button 
-              class="btn-timer-dynamic ${timer ? 'active-timer' : ''}" 
-              id="timer-btn-${pid}"
-              title="${timer ? 'Tap to cancel timer' : 'Set close timer'}" 
-              onclick="handleTimerClick(${pid}, '${escapeJs(name)}')">
-              ${timer ? `⏱ ${formatRemainingTime(timer.remaining_seconds)}` : '⏱ Timer'}
-            </button>
-            <button class="btn-quit-single" onclick="quitApp(${pid}, '${escapeJs(name)}', false)">Quit</button>
-            <button class="btn-force-quit-single" onclick="quitApp(${pid}, '${escapeJs(name)}', true)">Force</button>
-          `}
-        </div>
+
+        <!-- Expanded Actions Tray (Slides Open with Generous Touch Targets) -->
+        ${isFinder ? '' : `
+          <div class="app-actions-tray">
+            <div class="tray-divider"></div>
+            <div class="tray-buttons-grid">
+              <button 
+                class="tray-btn tray-btn-timer ${timer ? 'has-timer' : ''}" 
+                id="tray-timer-btn-${pid}"
+                onclick="event.stopPropagation(); handleTimerAction(${pid}, '${escapeJs(name)}')">
+                ${timer ? `⏱ Cancel` : '⏱ Timer'}
+              </button>
+              <button 
+                class="tray-btn tray-btn-quit" 
+                onclick="event.stopPropagation(); quitApp(${pid}, '${escapeJs(name)}', false)">
+                Quit
+              </button>
+              <button 
+                class="tray-btn tray-btn-force" 
+                onclick="event.stopPropagation(); quitApp(${pid}, '${escapeJs(name)}', true)">
+                Force
+              </button>
+            </div>
+          </div>
+        `}
       </div>
     `;
   }).join('');
@@ -495,15 +541,18 @@ btnSettings.addEventListener('click', () => {
   promptForToken();
 });
 
-// Real-time second countdown ticker on client
+// Live second ticker for inline timer badges & tray buttons
 setInterval(() => {
   for (const pid in activeTimers) {
     if (activeTimers[pid].remaining_seconds > 0) {
       activeTimers[pid].remaining_seconds--;
-      const btn = document.getElementById(`timer-btn-${pid}`);
-      if (btn) {
-        btn.textContent = `⏱ ${formatRemainingTime(activeTimers[pid].remaining_seconds)}`;
-      }
+      const formatted = `⏱ ${formatRemainingTime(activeTimers[pid].remaining_seconds)}`;
+      
+      const inlineBadge = document.getElementById(`timer-badge-${pid}`);
+      if (inlineBadge) inlineBadge.textContent = formatted;
+      
+      const trayBtn = document.getElementById(`tray-timer-btn-${pid}`);
+      if (trayBtn) trayBtn.textContent = `⏱ Cancel (${formatRemainingTime(activeTimers[pid].remaining_seconds)})`;
     }
   }
 }, 1000);
