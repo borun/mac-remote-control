@@ -1,4 +1,4 @@
-// iMac Remote Controller Client Script v5 with App Timer Support
+// iMac Remote Controller Client Script v6 with Robust Error Handling
 
 // 1. Manage Token
 const urlParams = new URLSearchParams(window.location.search);
@@ -128,16 +128,20 @@ timerModalConfirm.addEventListener('click', async () => {
   timerModal.classList.remove('active');
   pendingTimerApp = null;
 
+  showToast(`Setting ${mins}m timer for ${app.name}...`);
+
   const res = await apiCall('/api/action/app-timer/set', 'POST', {
-    pid: app.pid,
+    pid: parseInt(app.pid),
     app_name: app.name,
-    minutes: mins,
+    minutes: parseInt(mins),
     force: force
   });
 
   if (res && res.success) {
     showToast(res.message);
     fetchTelemetry();
+  } else if (res && res.detail) {
+    showToast(res.detail);
   }
 });
 
@@ -196,20 +200,20 @@ function setOnlineState(isOnline) {
     if (mainControlsWrapper) mainControlsWrapper.classList.remove('controls-disabled');
   } else {
     consecutiveFailures++;
-    connBadge.textContent = 'Offline';
-    connBadge.style.color = 'var(--accent-rose)';
-    connBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
-    connBadge.style.background = 'rgba(244, 63, 94, 0.15)';
-
-    if (consecutiveFailures >= 1) {
+    // Only trigger offline banner after 2 consecutive failures
+    if (consecutiveFailures >= 2) {
+      connBadge.textContent = 'Offline';
+      connBadge.style.color = 'var(--accent-rose)';
+      connBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+      connBadge.style.background = 'rgba(244, 63, 94, 0.15)';
       if (offlineBanner) offlineBanner.classList.add('active');
       if (mainControlsWrapper) mainControlsWrapper.classList.add('controls-disabled');
     }
   }
 }
 
-// API Helper with Timeout
-async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 4000) {
+// API Helper with Safe Error & Timeout Handling
+async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 6000) {
   if (!apiToken) {
     promptForToken();
     return null;
@@ -236,7 +240,10 @@ async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 4000) 
     }
 
     if (!res.ok) {
-      setOnlineState(false);
+      const errJson = await res.json().catch(() => null);
+      if (errJson && errJson.detail) {
+        showToast(`Server error: ${errJson.detail}`);
+      }
       return null;
     }
 
@@ -245,7 +252,12 @@ async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 4000) 
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    setOnlineState(false);
+    // Only background telemetry polling triggers the offline banner
+    if (endpoint.includes('/api/telemetry')) {
+      setOnlineState(false);
+    } else {
+      showToast('Action failed: Request timed out or server unavailable.');
+    }
     return null;
   }
 }
@@ -491,7 +503,6 @@ setInterval(() => {
     }
   }
   if (hasActive) {
-    // Quick DOM update for timer badges without re-rendering everything
     document.querySelectorAll('.timer-active-badge').forEach(badge => {
       const item = badge.closest('.force-quit-item');
       if (item) {
