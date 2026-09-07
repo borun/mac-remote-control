@@ -29,6 +29,9 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 class VolumeRequest(BaseModel):
     volume: int
 
+class LaunchAppRequest(BaseModel):
+    app_name: str
+
 class QuitAppRequest(BaseModel):
     pid: int
     force: bool = False
@@ -53,6 +56,18 @@ async def get_telemetry():
     telemetry = MacSystemController.get_telemetry()
     telemetry["active_timers"] = AppTimerManager.get_all_active_timers()
     return telemetry
+
+@app.get("/api/apps/installed", dependencies=[Depends(verify_token)])
+async def get_installed_apps():
+    """Returns list of all launchable installed macOS applications."""
+    return {"apps": MacSystemController.get_installed_applications()}
+
+@app.post("/api/action/launch-app", response_model=ActionResponse, dependencies=[Depends(verify_token)])
+async def launch_app(req: LaunchAppRequest):
+    if not req.app_name or not req.app_name.strip():
+        raise HTTPException(status_code=400, detail="App name cannot be empty")
+    success, msg = MacSystemController.launch_application(req.app_name.strip())
+    return {"success": success, "message": msg}
 
 @app.post("/api/action/lock", response_model=ActionResponse, dependencies=[Depends(verify_token)])
 async def action_lock():

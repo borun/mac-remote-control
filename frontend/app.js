@@ -57,6 +57,16 @@ const customTimerMinsInput = document.getElementById('custom-timer-mins');
 const timerForceCheck = document.getElementById('timer-force-check');
 const timerOptionBtns = document.querySelectorAll('.timer-option-btn');
 
+
+// Launch Modal Elements
+const btnOpenLaunchModal = document.getElementById('btn-open-launch-modal');
+const launchModal = document.getElementById('launch-modal');
+const launchModalClose = document.getElementById('launch-modal-close');
+const appSearchInput = document.getElementById('app-search-input');
+const installedAppsList = document.getElementById('installed-apps-list');
+
+let installedAppsCache = [];
+
 let pendingAction = null;
 let pendingTimerApp = null;
 let selectedTimerMinutes = 15;
@@ -72,6 +82,85 @@ function showToast(msg, duration = 2500) {
   toastEl.classList.add('show');
   setTimeout(() => toastEl.classList.remove('show'), duration);
 }
+
+// Spotlight Launch Modal Logic
+if (btnOpenLaunchModal) {
+  btnOpenLaunchModal.addEventListener('click', async () => {
+    launchModal.classList.add('active');
+    if (appSearchInput) {
+      appSearchInput.value = '';
+      setTimeout(() => appSearchInput.focus(), 150);
+    }
+    await loadInstalledApps();
+  });
+}
+
+if (launchModalClose) {
+  launchModalClose.addEventListener('click', () => {
+    launchModal.classList.remove('active');
+  });
+}
+
+async function loadInstalledApps() {
+  if (installedAppsCache.length > 0) {
+    renderInstalledApps(installedAppsCache);
+    return;
+  }
+  
+  installedAppsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Scanning applications on iMac...</div>';
+  const data = await apiCall('/api/apps/installed');
+  if (data && data.apps) {
+    installedAppsCache = data.apps;
+    renderInstalledApps(installedAppsCache);
+  } else {
+    installedAppsList.innerHTML = '<div style="text-align: center; color: var(--accent-rose); padding: 20px; font-size: 0.85rem;">Failed to load installed applications.</div>';
+  }
+}
+
+function renderInstalledApps(apps) {
+  if (!apps || apps.length === 0) {
+    installedAppsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">No matching applications found</div>';
+    return;
+  }
+
+  installedAppsList.innerHTML = apps.map(name => {
+    const initial = name.charAt(0).toUpperCase();
+    return `
+      <div class="launch-app-item" onclick="launchTargetApp('${escapeJs(name)}')">
+        <div class="launch-app-left">
+          <div class="launch-icon-placeholder">${initial}</div>
+          <span class="launch-app-name">${escapeHtml(name)}</span>
+        </div>
+        <span class="launch-btn-action">Launch</span>
+      </div>
+    `;
+  }).join('');
+}
+
+if (appSearchInput) {
+  appSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (!query) {
+      renderInstalledApps(installedAppsCache);
+      return;
+    }
+    const filtered = installedAppsCache.filter(app => app.toLowerCase().includes(query));
+    renderInstalledApps(filtered);
+  });
+}
+
+window.launchTargetApp = async function(name) {
+  launchModal.classList.remove('active');
+  showToast(`Launching ${name} on iMac...`);
+  
+  const res = await apiCall('/api/action/launch-app', 'POST', { app_name: name });
+  if (res && res.success) {
+    showToast(res.message);
+    setTimeout(fetchTelemetry, 1500);
+  } else if (res && res.message) {
+    showToast(res.message);
+  }
+};
 
 // Confirmation Prompt Helper
 function requestConfirmation(title, desc, actionFn) {

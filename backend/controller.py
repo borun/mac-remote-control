@@ -129,6 +129,34 @@ class MacSystemController:
             return True, "Shutdown initiated."
         return False, f"Failed to initiate shutdown: {err}"
 
+
+    @classmethod
+    def get_installed_applications(cls) -> List[str]:
+        """Scans standard macOS application directories for installed applications."""
+        app_dirs = ['/Applications', '/System/Applications', '/System/Applications/Utilities']
+        apps = set()
+        for d in app_dirs:
+            p = Path(d)
+            if p.exists():
+                try:
+                    for item in p.iterdir():
+                        if item.name.endswith('.app'):
+                            apps.add(item.stem)
+                except Exception:
+                    pass
+        # Filter out internal helper services and system utilities that aren't user apps
+        ignored = {'Install macOS', 'Uninstall', 'Helper', 'Feedback Assistant', 'Migration Assistant'}
+        filtered = [a for a in sorted(list(apps)) if not any(ign in a for ign in ignored)]
+        return filtered
+
+    @classmethod
+    def launch_application(cls, app_name: str) -> tuple[bool, str]:
+        """Launches a macOS application by its name using open -a."""
+        code, out, err = cls._run_cmd(["open", "-a", app_name])
+        if code == 0:
+            return True, f"Launched {app_name} on your iMac."
+        return False, f"Failed to launch {app_name}: {err or out}"
+
     @classmethod
     def get_running_user_apps(cls) -> List[Dict[str, Any]]:
         """
