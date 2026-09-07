@@ -350,30 +350,27 @@ class MacSystemController:
     @classmethod
     def _ensure_screenshot_helper(cls) -> Path | None:
         """
-        Compiles the dedicated imac_screenshot_helper Swift binary if not already present.
-        This provides strict permission isolation so python3 itself never requires screen access.
+        Ensures iMacRemoteHelper.app bundle is built and ready.
+        Packaging as an .app bundle with CFBundleIdentifier gives the helper
+        its own independent identity in macOS Privacy & Security (TCC),
+        so permission is granted strictly to iMacRemoteHelper, NOT Terminal or python3.
         """
-        bin_dir = PROJECT_ROOT / "bin"
-        helper_bin = bin_dir / "imac_screenshot_helper"
-        helper_src = PROJECT_ROOT / "helper" / "imac_screenshot_helper.swift"
+        app_bundle = PROJECT_ROOT / "bin" / "iMacRemoteHelper.app"
+        helper_bin = app_bundle / "Contents" / "MacOS" / "iMacRemoteHelper"
+        build_script = PROJECT_ROOT / "helper" / "build.sh"
 
         if helper_bin.exists() and os.access(helper_bin, os.X_OK):
             return helper_bin
 
-        if not helper_src.exists():
-            return None
-
-        # Attempt to compile with swiftc
-        try:
-            bin_dir.mkdir(parents=True, exist_ok=True)
-            code, _, err = cls._run_cmd(["swiftc", "-O", str(helper_src), "-o", str(helper_bin)])
-            if code == 0 and helper_bin.exists():
-                os.chmod(helper_bin, 0o755)
-                logger.info(f"Compiled isolated screenshot helper: {helper_bin}")
-                return helper_bin
-            logger.warning(f"Failed to auto-compile screenshot helper: {err}")
-        except Exception as e:
-            logger.warning(f"Error compiling screenshot helper: {e}")
+        if build_script.exists():
+            try:
+                code, _, err = cls._run_cmd(["/bin/bash", str(build_script)])
+                if code == 0 and helper_bin.exists():
+                    logger.info(f"Compiled isolated app bundle: {app_bundle}")
+                    return helper_bin
+                logger.warning(f"Failed to build app bundle: {err}")
+            except Exception as e:
+                logger.warning(f"Error executing build.sh: {e}")
 
         return None
 
@@ -381,8 +378,8 @@ class MacSystemController:
     def take_screenshot(cls) -> tuple[bool, bytes, str]:
         """
         Captures the iMac screen silently into a temporary JPEG file.
-        Prioritizes the isolated imac_screenshot_helper binary so that
-        screen recording permission is granted strictly to the helper, NOT python3.
+        Prioritizes the isolated iMacRemoteHelper.app bundle so that
+        screen recording permission is granted strictly to iMacRemoteHelper.
         Returns (success, image_bytes, error_message).
         """
         tmp_path = Path("/tmp/imac_remote_capture.jpg")
@@ -392,7 +389,7 @@ class MacSystemController:
             except Exception:
                 pass
 
-        # 1. Try isolated native helper binary first
+        # 1. Try isolated native app bundle helper first
         helper_bin = cls._ensure_screenshot_helper()
         if helper_bin:
             code, out, err = cls._run_cmd([str(helper_bin), str(tmp_path)])
@@ -403,7 +400,7 @@ class MacSystemController:
                     return True, img_data, ""
                 except Exception as e:
                     return False, b"", f"Failed to read captured image: {e}"
-            logger.warning(f"Isolated helper failed (exit {code}): {err or out}. Falling back to screencapture.")
+            logger.warning(f"Isolated helper app failed (exit {code}): {err or out}. Falling back to screencapture.")
 
         # 2. Fallback to native macOS screencapture
         code, out, err = cls._run_cmd(["/usr/sbin/screencapture", "-x", "-t", "jpg", "-C", str(tmp_path)])
