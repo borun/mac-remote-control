@@ -391,7 +391,7 @@ function renderAppsList(apps) {
                 class="tray-btn tray-btn-timer ${timer ? 'has-timer' : ''}" 
                 id="tray-timer-btn-${pid}"
                 onclick="event.stopPropagation(); handleTimerAction(${pid}, '${escapeJs(name)}')">
-                ${timer ? `⏱ Cancel` : '⏱ Timer'}
+                ${timer ? '⏱ Cancel' : '⏱ Timer'}
               </button>
               <button 
                 class="tray-btn tray-btn-quit" 
@@ -552,7 +552,8 @@ setInterval(() => {
       if (inlineBadge) inlineBadge.textContent = formatted;
       
       const trayBtn = document.getElementById(`tray-timer-btn-${pid}`);
-      if (trayBtn) trayBtn.textContent = `⏱ Cancel (${formatRemainingTime(activeTimers[pid].remaining_seconds)})`;
+      // Keep Cancel button text static so height never shifts
+      if (trayBtn) trayBtn.textContent = '⏱ Cancel';
     }
   }
 }, 1000);
