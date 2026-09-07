@@ -360,14 +360,14 @@ class MacSystemController:
         build_script = PROJECT_ROOT / "helper" / "build.sh"
 
         if helper_bin.exists() and os.access(helper_bin, os.X_OK):
-            return helper_bin
+            return app_bundle
 
         if build_script.exists():
             try:
                 code, _, err = cls._run_cmd(["/bin/bash", str(build_script)])
                 if code == 0 and helper_bin.exists():
                     logger.info(f"Compiled isolated app bundle: {app_bundle}")
-                    return helper_bin
+                    return app_bundle
                 logger.warning(f"Failed to build app bundle: {err}")
             except Exception as e:
                 logger.warning(f"Error executing build.sh: {e}")
@@ -390,9 +390,12 @@ class MacSystemController:
                 pass
 
         # 1. Try isolated native app bundle helper first
-        helper_bin = cls._ensure_screenshot_helper()
-        if helper_bin:
-            code, out, err = cls._run_cmd([str(helper_bin), str(tmp_path)])
+        app_bundle = cls._ensure_screenshot_helper()
+        if app_bundle:
+            # Running via 'open -n -W -a' ensures macOS LaunchServices evaluates
+            # the app bundle identity (com.user.imacremote.helper) rather than the parent terminal process
+            cmd = ["/usr/bin/open", "-n", "-W", "-a", str(app_bundle), "--args", str(tmp_path)]
+            code, out, err = cls._run_cmd(cmd)
             if code == 0 and tmp_path.exists():
                 try:
                     img_data = tmp_path.read_bytes()
@@ -400,7 +403,20 @@ class MacSystemController:
                     return True, img_data, ""
                 except Exception as e:
                     return False, b"", f"Failed to read captured image: {e}"
-            logger.warning(f"Isolated helper app failed (exit {code}): {err or out}. Falling back to screencapture.")
+
+            # Fallback to direct binary execution
+            bin_path = app_bundle / "Contents" / "MacOS" / "iMacRemoteHelper"
+            if bin_path.exists():
+                code2, out2, err2 = cls._run_cmd([str(bin_path), str(tmp_path)])
+                if code2 == 0 and tmp_path.exists():
+                    try:
+                        img_data = tmp_path.read_bytes()
+                        tmp_path.unlink()
+                        return True, img_data, ""
+                    except Exception as e:
+                        return False, b"", f"Failed to read captured image: {e}"
+
+            logger.warning(f"Isolated helper app failed: {err or out}. Falling back to screencapture.")
 
         # 2. Fallback to native macOS screencapture
         code, out, err = cls._run_cmd(["/usr/sbin/screencapture", "-x", "-t", "jpg", "-C", str(tmp_path)])
