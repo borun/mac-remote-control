@@ -1,6 +1,7 @@
 import os
 import io
 import asyncio
+from typing import Optional
 from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
