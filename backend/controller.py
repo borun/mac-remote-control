@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 import subprocess
 import psutil
 import json
@@ -54,7 +55,6 @@ class MacSystemController:
         """
         if block:
             cmd = f"sudo -n /sbin/pfctl -E -f {PF_CONF}"
-            # Use shell=True subprocess to resolve PATH and sudoers
             try:
                 res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
                 if res.returncode == 0 or "ALTQ" in res.stderr:
@@ -64,7 +64,6 @@ class MacSystemController:
             except Exception as e:
                 err_msg = str(e)
 
-            # Fallback to AppleScript prompt if sudo -n fails
             script = f'do shell script "/sbin/pfctl -E -f \\"{PF_CONF}\\"" with administrator privileges'
             code, out, err = cls._run_osascript(script)
             if code == 0 or "ALTQ" in err:
@@ -132,7 +131,10 @@ class MacSystemController:
 
     @classmethod
     def get_running_user_apps(cls) -> List[Dict[str, Any]]:
-        """Returns exact list of quitable regular GUI apps (matching macOS Force Quit dialog)."""
+        """
+        Returns exact list of quitable regular GUI apps (matching macOS Force Quit dialog)
+        along with the exact runtime in seconds for each application.
+        """
         script = '''
         ObjC.import('AppKit');
         var apps = $.NSWorkspace.sharedWorkspace.runningApplications;
@@ -157,7 +159,15 @@ class MacSystemController:
         code, out, _ = cls._run_jxa(script)
         if code == 0 and out:
             try:
-                return json.loads(out)
+                apps = json.loads(out)
+                now = time.time()
+                for app in apps:
+                    try:
+                        proc = psutil.Process(app["pid"])
+                        app["runtime_seconds"] = int(now - proc.create_time())
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        app["runtime_seconds"] = 0
+                return apps
             except Exception as e:
                 logger.error(f"Failed to parse running apps JSON: {e}")
         return []

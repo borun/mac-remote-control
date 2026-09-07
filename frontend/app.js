@@ -192,6 +192,23 @@ window.toggleAppCard = function(pid) {
   }
 };
 
+function formatRuntime(seconds) {
+  if (!seconds || seconds <= 0) return '< 1m';
+  const mins = Math.floor(seconds / 60);
+  const hrs = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+
+  if (days > 0) {
+    const remHrs = hrs % 24;
+    return `${days}d ${remHrs}h`;
+  }
+  if (hrs > 0) {
+    const remMins = mins % 60;
+    return `${hrs}h ${remMins}m`;
+  }
+  return `${Math.max(1, mins)}m`;
+}
+
 function formatRemainingTime(seconds) {
   if (seconds <= 0) return '0s';
   const mins = Math.floor(seconds / 60);
@@ -340,6 +357,7 @@ function renderAppsList(apps) {
   appsContainer.innerHTML = apps.map(app => {
     let name = typeof app === 'object' ? app.name : app;
     let pid = typeof app === 'object' ? app.pid : '';
+    let runtime = typeof app === 'object' ? (app.runtime_seconds || 0) : 0;
     let isFinder = typeof app === 'object' ? app.is_finder : (name === 'Finder');
     
     if (!name || typeof name !== 'string') name = 'App';
@@ -367,7 +385,11 @@ function renderAppsList(apps) {
                   </span>
                 ` : ''}
               </div>
-              <span class="app-pid-text">PID: ${pid}</span>
+              <div class="app-meta-sub">
+                <span class="app-pid-text">PID: ${pid}</span>
+                <span class="app-meta-dot">•</span>
+                <span class="app-runtime-text" title="Application Runtime">Running: ${formatRuntime(runtime)}</span>
+              </div>
             </div>
           </div>
           
