@@ -1,9 +1,9 @@
-const CACHE_NAME = 'imac-remote-v6';
+const CACHE_NAME = 'imac-remote-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=5',
-  '/app.js?v=6',
+  '/style.css?v=7',
+  '/app.js?v=7',
   '/manifest.webmanifest',
   '/favicon.ico',
   '/icons/apple-touch-icon-180x180.png',
@@ -30,7 +30,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Pass API requests straight to network
   if (url.pathname.startsWith('/api/')) {
     return;
   }

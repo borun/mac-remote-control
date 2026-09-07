@@ -1,4 +1,4 @@
-// iMac Remote Controller Client Script v6 with Robust Error Handling
+// iMac Remote Controller Client Script v7 with Dynamic Timer Button
 
 // 1. Manage Token
 const urlParams = new URLSearchParams(window.location.search);
@@ -159,22 +159,29 @@ window.openTimerModal = function(pid, name) {
   timerModal.classList.add('active');
 };
 
-window.cancelAppTimer = function(pid, name) {
-  requestConfirmation(
-    `Cancel Timer for ${name}`,
-    `Do you want to cancel the scheduled close timer for ${name}?`,
-    async () => {
-      const res = await apiCall('/api/action/app-timer/cancel', 'POST', { pid: parseInt(pid) });
-      if (res && res.success) {
-        showToast(res.message);
-        fetchTelemetry();
+window.handleTimerClick = function(pid, name) {
+  const timer = activeTimers[pid] || activeTimers[String(pid)];
+  if (timer) {
+    // If timer already active, offer to cancel or reset it
+    requestConfirmation(
+      `Manage Timer: ${name}`,
+      `A close timer is currently running (closing in ${formatRemainingTime(timer.remaining_seconds)}). Do you want to cancel this timer?`,
+      async () => {
+        const res = await apiCall('/api/action/app-timer/cancel', 'POST', { pid: parseInt(pid) });
+        if (res && res.success) {
+          showToast(res.message);
+          fetchTelemetry();
+        }
       }
-    }
-  );
+    );
+  } else {
+    // If no timer, open setup modal
+    openTimerModal(pid, name);
+  }
 };
 
 function formatRemainingTime(seconds) {
-  if (seconds <= 0) return 'closing...';
+  if (seconds <= 0) return '0s';
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   if (mins >= 60) {
@@ -183,7 +190,7 @@ function formatRemainingTime(seconds) {
     return `${hrs}h ${remMins}m`;
   }
   if (mins > 0) {
-    return `${mins}m ${secs}s`;
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
   }
   return `${secs}s`;
 }
@@ -200,7 +207,6 @@ function setOnlineState(isOnline) {
     if (mainControlsWrapper) mainControlsWrapper.classList.remove('controls-disabled');
   } else {
     consecutiveFailures++;
-    // Only trigger offline banner after 2 consecutive failures
     if (consecutiveFailures >= 2) {
       connBadge.textContent = 'Offline';
       connBadge.style.color = 'var(--accent-rose)';
@@ -252,7 +258,6 @@ async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 6000) 
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    // Only background telemetry polling triggers the offline banner
     if (endpoint.includes('/api/telemetry')) {
       setOnlineState(false);
     } else {
@@ -336,23 +341,20 @@ function renderAppsList(apps) {
         <div class="app-meta">
           <div class="app-icon-placeholder">${initial}</div>
           <div class="app-details">
-            <span class="app-name-text">${escapeHtml(name)}</span>
-            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-              ${pid ? `<span class="app-pid-text">PID: ${pid}</span>` : ''}
-              ${timer ? `
-                <span class="timer-active-badge" title="Tap to cancel timer" onclick="cancelAppTimer(${pid}, '${escapeJs(name)}')">
-                  ⏱ ${formatRemainingTime(timer.remaining_seconds)}
-                </span>
-              ` : ''}
-            </div>
+            <span class="app-name-text" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+            <span class="app-pid-text">PID: ${pid}</span>
           </div>
         </div>
         <div class="app-btn-group">
           ${isFinder ? `
             <span style="font-size: 0.75rem; color: var(--text-muted); padding: 4px 8px;">System</span>
           ` : `
-            <button class="btn-timer-single" title="Set close timer" onclick="openTimerModal(${pid}, '${escapeJs(name)}')">
-              ⏱ Timer
+            <button 
+              class="btn-timer-dynamic ${timer ? 'active-timer' : ''}" 
+              id="timer-btn-${pid}"
+              title="${timer ? 'Tap to cancel timer' : 'Set close timer'}" 
+              onclick="handleTimerClick(${pid}, '${escapeJs(name)}')">
+              ${timer ? `⏱ ${formatRemainingTime(timer.remaining_seconds)}` : '⏱ Timer'}
             </button>
             <button class="btn-quit-single" onclick="quitApp(${pid}, '${escapeJs(name)}', false)">Quit</button>
             <button class="btn-force-quit-single" onclick="quitApp(${pid}, '${escapeJs(name)}', true)">Force</button>
@@ -493,25 +495,16 @@ btnSettings.addEventListener('click', () => {
   promptForToken();
 });
 
-// Update active timer count every second on the client
+// Real-time second countdown ticker on client
 setInterval(() => {
-  let hasActive = false;
   for (const pid in activeTimers) {
     if (activeTimers[pid].remaining_seconds > 0) {
       activeTimers[pid].remaining_seconds--;
-      hasActive = true;
-    }
-  }
-  if (hasActive) {
-    document.querySelectorAll('.timer-active-badge').forEach(badge => {
-      const item = badge.closest('.force-quit-item');
-      if (item) {
-        const pid = item.getAttribute('data-pid');
-        if (activeTimers[pid]) {
-          badge.textContent = `⏱ ${formatRemainingTime(activeTimers[pid].remaining_seconds)}`;
-        }
+      const btn = document.getElementById(`timer-btn-${pid}`);
+      if (btn) {
+        btn.textContent = `⏱ ${formatRemainingTime(activeTimers[pid].remaining_seconds)}`;
       }
-    });
+    }
   }
 }, 1000);
 
