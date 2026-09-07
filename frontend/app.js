@@ -1,4 +1,4 @@
-// iMac Remote Controller Client Script v5
+// iMac Remote Controller Client Script v5 with App Timer Support
 
 // 1. Manage Token
 const urlParams = new URLSearchParams(window.location.search);
@@ -39,7 +39,7 @@ const btnRestart = document.getElementById('btn-restart');
 const btnShutdown = document.getElementById('btn-shutdown');
 const btnSettings = document.getElementById('btn-settings');
 
-// Modal Elements
+// Confirmation Modal Elements
 const confirmModal = document.getElementById('confirm-modal');
 const modalTitle = document.getElementById('modal-title');
 const modalDesc = document.getElementById('modal-desc');
@@ -47,7 +47,20 @@ const modalCancel = document.getElementById('modal-cancel');
 const modalConfirm = document.getElementById('modal-confirm');
 const toastEl = document.getElementById('toast');
 
+// Timer Modal Elements
+const timerModal = document.getElementById('timer-modal');
+const timerModalTitle = document.getElementById('timer-modal-title');
+const timerModalDesc = document.getElementById('timer-modal-desc');
+const timerModalCancel = document.getElementById('timer-modal-cancel');
+const timerModalConfirm = document.getElementById('timer-modal-confirm');
+const customTimerMinsInput = document.getElementById('custom-timer-mins');
+const timerForceCheck = document.getElementById('timer-force-check');
+const timerOptionBtns = document.querySelectorAll('.timer-option-btn');
+
 let pendingAction = null;
+let pendingTimerApp = null;
+let selectedTimerMinutes = 15;
+let activeTimers = {};
 let consecutiveFailures = 0;
 let isFetching = false;
 let isInternetBlocked = false;
@@ -59,7 +72,7 @@ function showToast(msg, duration = 2500) {
   setTimeout(() => toastEl.classList.remove('show'), duration);
 }
 
-// Modal Prompt Helper
+// Confirmation Prompt Helper
 function requestConfirmation(title, desc, actionFn) {
   modalTitle.textContent = title;
   modalDesc.textContent = desc;
@@ -81,6 +94,96 @@ modalConfirm.addEventListener('click', async () => {
   }
 });
 
+// Timer Setup Modal Logic
+timerOptionBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    timerOptionBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedTimerMinutes = parseInt(btn.getAttribute('data-mins'));
+    if (customTimerMinsInput) customTimerMinsInput.value = '';
+  });
+});
+
+if (customTimerMinsInput) {
+  customTimerMinsInput.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val > 0) {
+      selectedTimerMinutes = val;
+      timerOptionBtns.forEach(b => b.classList.remove('selected'));
+    }
+  });
+}
+
+timerModalCancel.addEventListener('click', () => {
+  timerModal.classList.remove('active');
+  pendingTimerApp = null;
+});
+
+timerModalConfirm.addEventListener('click', async () => {
+  if (!pendingTimerApp) return;
+  const mins = selectedTimerMinutes;
+  const force = timerForceCheck ? timerForceCheck.checked : false;
+  const app = pendingTimerApp;
+
+  timerModal.classList.remove('active');
+  pendingTimerApp = null;
+
+  const res = await apiCall('/api/action/app-timer/set', 'POST', {
+    pid: app.pid,
+    app_name: app.name,
+    minutes: mins,
+    force: force
+  });
+
+  if (res && res.success) {
+    showToast(res.message);
+    fetchTelemetry();
+  }
+});
+
+window.openTimerModal = function(pid, name) {
+  pendingTimerApp = { pid: parseInt(pid), name };
+  timerModalTitle.textContent = `Timer for ${name}`;
+  timerModalDesc.textContent = `Set when macOS should automatically close ${name}:`;
+  selectedTimerMinutes = 15;
+  timerOptionBtns.forEach(b => {
+    if (b.getAttribute('data-mins') === '15') b.classList.add('selected');
+    else b.classList.remove('selected');
+  });
+  if (customTimerMinsInput) customTimerMinsInput.value = '';
+  if (timerForceCheck) timerForceCheck.checked = false;
+  timerModal.classList.add('active');
+};
+
+window.cancelAppTimer = function(pid, name) {
+  requestConfirmation(
+    `Cancel Timer for ${name}`,
+    `Do you want to cancel the scheduled close timer for ${name}?`,
+    async () => {
+      const res = await apiCall('/api/action/app-timer/cancel', 'POST', { pid: parseInt(pid) });
+      if (res && res.success) {
+        showToast(res.message);
+        fetchTelemetry();
+      }
+    }
+  );
+};
+
+function formatRemainingTime(seconds) {
+  if (seconds <= 0) return 'closing...';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins >= 60) {
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return `${hrs}h ${remMins}m`;
+  }
+  if (mins > 0) {
+    return `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
+}
+
 // Update Online / Offline State
 function setOnlineState(isOnline) {
   if (isOnline) {
@@ -98,7 +201,6 @@ function setOnlineState(isOnline) {
     connBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
     connBadge.style.background = 'rgba(244, 63, 94, 0.15)';
 
-    // Show clear offline banner after 1-2 failed attempts
     if (consecutiveFailures >= 1) {
       if (offlineBanner) offlineBanner.classList.add('active');
       if (mainControlsWrapper) mainControlsWrapper.classList.add('controls-disabled');
@@ -191,7 +293,10 @@ async function fetchTelemetry() {
   }
   muteText.textContent = data.muted ? 'Unmute' : 'Mute';
 
-  // Running Apps Render (Force Quit style list)
+  // Active Timers map
+  activeTimers = data.active_timers || {};
+
+  // Running Apps Render
   renderAppsList(data.running_apps || []);
 }
 
@@ -211,19 +316,32 @@ function renderAppsList(apps) {
     if (!name || typeof name !== 'string') name = 'App';
     const initial = name.charAt(0).toUpperCase();
 
+    // Check if this app has an active timer
+    const timer = activeTimers[pid] || activeTimers[String(pid)];
+
     return `
       <div class="force-quit-item" data-pid="${pid}">
         <div class="app-meta">
           <div class="app-icon-placeholder">${initial}</div>
           <div class="app-details">
             <span class="app-name-text">${escapeHtml(name)}</span>
-            ${pid ? `<span class="app-pid-text">PID: ${pid}</span>` : ''}
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              ${pid ? `<span class="app-pid-text">PID: ${pid}</span>` : ''}
+              ${timer ? `
+                <span class="timer-active-badge" title="Tap to cancel timer" onclick="cancelAppTimer(${pid}, '${escapeJs(name)}')">
+                  ⏱ ${formatRemainingTime(timer.remaining_seconds)}
+                </span>
+              ` : ''}
+            </div>
           </div>
         </div>
         <div class="app-btn-group">
           ${isFinder ? `
             <span style="font-size: 0.75rem; color: var(--text-muted); padding: 4px 8px;">System</span>
           ` : `
+            <button class="btn-timer-single" title="Set close timer" onclick="openTimerModal(${pid}, '${escapeJs(name)}')">
+              ⏱ Timer
+            </button>
             <button class="btn-quit-single" onclick="quitApp(${pid}, '${escapeJs(name)}', false)">Quit</button>
             <button class="btn-force-quit-single" onclick="quitApp(${pid}, '${escapeJs(name)}', true)">Force</button>
           `}
@@ -363,7 +481,30 @@ btnSettings.addEventListener('click', () => {
   promptForToken();
 });
 
-// Register Progressive Web App Service Worker for 100% offline shell availability
+// Update active timer count every second on the client
+setInterval(() => {
+  let hasActive = false;
+  for (const pid in activeTimers) {
+    if (activeTimers[pid].remaining_seconds > 0) {
+      activeTimers[pid].remaining_seconds--;
+      hasActive = true;
+    }
+  }
+  if (hasActive) {
+    // Quick DOM update for timer badges without re-rendering everything
+    document.querySelectorAll('.timer-active-badge').forEach(badge => {
+      const item = badge.closest('.force-quit-item');
+      if (item) {
+        const pid = item.getAttribute('data-pid');
+        if (activeTimers[pid]) {
+          badge.textContent = `⏱ ${formatRemainingTime(activeTimers[pid].remaining_seconds)}`;
+        }
+      }
+    });
+  }
+}, 1000);
+
+// Register Progressive Web App Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(err => {

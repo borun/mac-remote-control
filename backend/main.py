@@ -10,9 +10,10 @@ from pydantic import BaseModel
 import qrcode
 
 from backend.controller import MacSystemController
+from backend.timer_manager import AppTimerManager
 from backend.security import get_or_create_config, verify_token
 
-app = FastAPI(title="iMac Remote Control Server", version="1.2.0")
+app = FastAPI(title="iMac Remote Control Server", version="1.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,8 +33,14 @@ class QuitAppRequest(BaseModel):
     pid: int
     force: bool = False
 
-class InternetRequest(BaseModel):
-    block: bool
+class AppTimerRequest(BaseModel):
+    pid: int
+    app_name: str
+    minutes: int
+    force: bool = False
+
+class CancelTimerRequest(BaseModel):
+    pid: int
 
 class ActionResponse(BaseModel):
     success: bool
@@ -42,8 +49,10 @@ class ActionResponse(BaseModel):
 # API Routes
 @app.get("/api/telemetry", dependencies=[Depends(verify_token)])
 async def get_telemetry():
-    """Returns current system telemetry (CPU, RAM, Volume, Internet state, Force-quit app list)."""
-    return MacSystemController.get_telemetry()
+    """Returns telemetry including CPU, RAM, active apps, and app timers."""
+    telemetry = MacSystemController.get_telemetry()
+    telemetry["active_timers"] = AppTimerManager.get_all_active_timers()
+    return telemetry
 
 @app.post("/api/action/lock", response_model=ActionResponse, dependencies=[Depends(verify_token)])
 async def action_lock():
@@ -74,8 +83,34 @@ async def action_quit_apps():
 
 @app.post("/api/action/quit-app", response_model=ActionResponse, dependencies=[Depends(verify_token)])
 async def action_quit_single_app(req: QuitAppRequest):
+    # Cancel any timer for this app if it's quit immediately
+    AppTimerManager.cancel_timer(req.pid)
     success, msg = MacSystemController.quit_app_by_pid(req.pid, force=req.force)
     return {"success": success, "message": msg}
+
+@app.post("/api/action/app-timer/set", response_model=ActionResponse, dependencies=[Depends(verify_token)])
+async def set_app_timer(req: AppTimerRequest):
+    if req.minutes <= 0:
+        raise HTTPException(status_code=400, detail="Duration must be greater than 0 minutes")
+    
+    duration_secs = req.minutes * 60
+    timer_info = AppTimerManager.schedule_app_close(
+        pid=req.pid,
+        app_name=req.app_name,
+        duration_seconds=duration_secs,
+        force=req.force
+    )
+    return {
+        "success": True,
+        "message": f"Timer set: {req.app_name} will close in {req.minutes} min."
+    }
+
+@app.post("/api/action/app-timer/cancel", response_model=ActionResponse, dependencies=[Depends(verify_token)])
+async def cancel_app_timer(req: CancelTimerRequest):
+    cancelled = AppTimerManager.cancel_timer(req.pid)
+    if cancelled:
+        return {"success": True, "message": "Timer cancelled successfully."}
+    return {"success": False, "message": "No active timer found for this application."}
 
 @app.post("/api/action/internet/toggle", response_model=ActionResponse, dependencies=[Depends(verify_token)])
 async def action_internet_toggle():

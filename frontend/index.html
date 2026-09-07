@@ -19,7 +19,7 @@
   <meta name="application-name" content="iMac Remote">
   <meta name="theme-color" content="#090d16">
   
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="/style.css?v=5">
 </head>
 <body>
   <div class="container">
@@ -166,9 +166,41 @@
     </div>
   </div>
 
+    <!-- Timer Setup Modal -->
+  <div id="timer-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="timer-modal-title">Set Close Timer</h3>
+      <p id="timer-modal-desc">Select when you want this app to close:</p>
+      
+      <div class="timer-options-grid">
+        <button class="timer-option-btn" data-mins="5">5 Min</button>
+        <button class="timer-option-btn" data-mins="15">15 Min</button>
+        <button class="timer-option-btn" data-mins="30">30 Min</button>
+        <button class="timer-option-btn" data-mins="45">45 Min</button>
+        <button class="timer-option-btn" data-mins="60">1 Hour</button>
+        <button class="timer-option-btn" data-mins="120">2 Hours</button>
+      </div>
+
+      <div class="custom-timer-input-wrap">
+        <input type="number" id="custom-timer-mins" placeholder="Custom minutes..." min="1" max="1440">
+        <span>minutes</span>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin: 14px 0 6px 0; font-size: 0.8rem; color: var(--text-muted);">
+        <input type="checkbox" id="timer-force-check" style="accent-color: var(--accent-rose); width: 16px; height: 16px;">
+        <label for="timer-force-check">Force quit if app doesn't respond</label>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button id="timer-modal-cancel" class="modal-btn modal-btn-cancel">Cancel</button>
+        <button id="timer-modal-confirm" class="modal-btn" style="background: var(--accent-cyan); color: #000; font-weight: 700;">Set Timer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast">Command executed</div>
 
-  <script src="/app.js?v=4"></script>
+  <script src="/app.js?v=5"></script>
 </body>
 </html>
