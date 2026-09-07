@@ -1,4 +1,4 @@
-// iMac Remote Controller Client Script v3
+// iMac Remote Controller Client Script v5
 
 // 1. Manage Token
 const urlParams = new URLSearchParams(window.location.search);
@@ -12,6 +12,10 @@ let apiToken = localStorage.getItem('imac_api_token') || '';
 
 // DOM Elements
 const connBadge = document.getElementById('conn-badge');
+const offlineBanner = document.getElementById('offline-banner');
+const btnRetryConn = document.getElementById('btn-retry-conn');
+const mainControlsWrapper = document.getElementById('main-controls-wrapper');
+
 const statCpu = document.getElementById('stat-cpu');
 const statCpuBar = document.getElementById('stat-cpu-bar');
 const statRam = document.getElementById('stat-ram');
@@ -44,6 +48,9 @@ const modalConfirm = document.getElementById('modal-confirm');
 const toastEl = document.getElementById('toast');
 
 let pendingAction = null;
+let consecutiveFailures = 0;
+let isFetching = false;
+let isInternetBlocked = false;
 
 // Toast Helper
 function showToast(msg, duration = 2500) {
@@ -74,12 +81,40 @@ modalConfirm.addEventListener('click', async () => {
   }
 });
 
-// API Helper
-async function apiCall(endpoint, method = 'GET', body = null) {
+// Update Online / Offline State
+function setOnlineState(isOnline) {
+  if (isOnline) {
+    consecutiveFailures = 0;
+    connBadge.textContent = 'Connected';
+    connBadge.style.color = 'var(--accent-emerald)';
+    connBadge.style.borderColor = 'rgba(52, 211, 153, 0.3)';
+    connBadge.style.background = 'rgba(52, 211, 153, 0.15)';
+    if (offlineBanner) offlineBanner.classList.remove('active');
+    if (mainControlsWrapper) mainControlsWrapper.classList.remove('controls-disabled');
+  } else {
+    consecutiveFailures++;
+    connBadge.textContent = 'Offline';
+    connBadge.style.color = 'var(--accent-rose)';
+    connBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+    connBadge.style.background = 'rgba(244, 63, 94, 0.15)';
+
+    // Show clear offline banner after 1-2 failed attempts
+    if (consecutiveFailures >= 1) {
+      if (offlineBanner) offlineBanner.classList.add('active');
+      if (mainControlsWrapper) mainControlsWrapper.classList.add('controls-disabled');
+    }
+  }
+}
+
+// API Helper with Timeout
+async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 4000) {
   if (!apiToken) {
     promptForToken();
     return null;
   }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const headers = {
     'Authorization': `Bearer ${apiToken}`,
@@ -87,9 +122,10 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   };
 
   try {
-    const options = { method, headers };
+    const options = { method, headers, signal: controller.signal };
     if (body) options.body = JSON.stringify(body);
     const res = await fetch(endpoint, options);
+    clearTimeout(timeoutId);
     
     if (res.status === 401) {
       showToast('Authentication failed. Re-enter token.');
@@ -97,12 +133,17 @@ async function apiCall(endpoint, method = 'GET', body = null) {
       return null;
     }
 
-    return await res.json();
+    if (!res.ok) {
+      setOnlineState(false);
+      return null;
+    }
+
+    const data = await res.json();
+    setOnlineState(true);
+    return data;
   } catch (err) {
-    connBadge.textContent = 'Offline';
-    connBadge.style.color = 'var(--accent-rose)';
-    connBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
-    connBadge.style.background = 'rgba(244, 63, 94, 0.15)';
+    clearTimeout(timeoutId);
+    setOnlineState(false);
     return null;
   }
 }
@@ -117,9 +158,6 @@ function promptForToken() {
 }
 
 // Fetch Telemetry & App List
-let isFetching = false;
-let isInternetBlocked = false;
-
 async function fetchTelemetry() {
   if (isFetching) return;
   isFetching = true;
@@ -127,12 +165,6 @@ async function fetchTelemetry() {
   isFetching = false;
 
   if (!data) return;
-
-  // Connection badge active
-  connBadge.textContent = 'Connected';
-  connBadge.style.color = 'var(--accent-emerald)';
-  connBadge.style.borderColor = 'rgba(52, 211, 153, 0.3)';
-  connBadge.style.background = 'rgba(52, 211, 153, 0.15)';
 
   // CPU
   statCpu.textContent = `${data.cpu_percent.toFixed(1)}%`;
@@ -234,6 +266,13 @@ if (btnRefreshApps) {
   });
 }
 
+if (btnRetryConn) {
+  btnRetryConn.addEventListener('click', () => {
+    showToast('Checking connection to iMac...');
+    fetchTelemetry();
+  });
+}
+
 // Action Handlers
 btnLock.addEventListener('click', async () => {
   const res = await apiCall('/api/action/lock', 'POST');
@@ -323,6 +362,15 @@ btnMute.addEventListener('click', async () => {
 btnSettings.addEventListener('click', () => {
   promptForToken();
 });
+
+// Register Progressive Web App Service Worker for 100% offline shell availability
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.warn('SW registration skipped:', err);
+    });
+  });
+}
 
 // Initial fetch & Polling Interval (every 3 seconds)
 if (apiToken) {

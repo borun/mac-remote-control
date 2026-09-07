@@ -36,6 +36,25 @@
       </button>
     </header>
 
+    <!-- Offline Alert Banner -->
+    <div id="offline-banner" class="offline-banner">
+      <div class="offline-banner-header">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>iMac is Offline or Unreachable</span>
+      </div>
+      <div class="offline-banner-desc">
+        Cannot establish a connection to your iMac. Possible causes:
+      </div>
+      <ul class="offline-reasons">
+        <li>Your iMac is sleeping or powered off.</li>
+        <li>You are not on the same Wi-Fi network (or Tailscale is disconnected).</li>
+        <li>The remote control daemon on the iMac is not running.</li>
+      </ul>
+      <button id="btn-retry-conn" class="offline-retry-btn">Reconnect Now</button>
+    </div>
+
+
+    <div id="main-controls-wrapper">
     <!-- Telemetry Card -->
     <div class="card">
       <div class="card-title">
@@ -131,6 +150,8 @@
         </button>
       </div>
     </div>
+  </div>
+
   </div>
 
   <!-- Modal Confirmation for Destructive Actions -->
